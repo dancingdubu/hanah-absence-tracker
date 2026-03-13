@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Absence Tracker — Hanah One</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #1a1a2e;
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: 0.3px; }
+  .header .subtitle { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+
+  /* ── View tabs ── */
+  .view-tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .view-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #94a3b8;
+    border: none;
+    background: transparent;
+    transition: all 0.15s;
+  }
+  .view-tab.active { background: white; color: #1a1a2e; }
+
+  /* ── Main layout ── */
+  .main { display: flex; height: calc(100vh - 68px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px;
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-section { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+  .sidebar-section h3 { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+
+  /* Legend */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+    margin-bottom: 2px;
+  }
+  .legend-item:hover { background: #f8fafc; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-name { font-size: 0.82rem; flex: 1; }
+  .legend-score {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  /* Score type chips */
+  .type-legend { display: flex; flex-direction: column; gap: 6px; }
+  .type-item { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #475569; }
+  .type-swatch {
+    width: 28px; height: 14px;
+    border-radius: 3px;
+    background: #6366f1;
+    flex-shrink: 0;
+  }
+  .type-swatch.half-left {
+    background: linear-gradient(90deg, #6366f1 50%, #e2e8f0 50%);
+  }
+  .type-swatch.half-right {
+    background: linear-gradient(90deg, #e2e8f0 50%, #6366f1 50%);
+  }
+  .type-swatch.partial {
+    background: repeating-linear-gradient(45deg, #6366f1, #6366f1 3px, #e2e8f0 3px, #e2e8f0 6px);
+  }
+
+  /* ── Calendar area ── */
+  .calendar-area {
+    flex: 1;
+    overflow: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Nav */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-nav h2 { font-size: 1.4rem; font-weight: 700; }
+  .nav-btns { display: flex; gap: 8px; }
+  .nav-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    color: #475569;
+  }
+  .nav-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .today-btn {
+    padding: 0 14px;
+    width: auto;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* Calendar grid */
+  .cal-grid {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cal-weekday {
+    text-align: center;
+    padding: 10px 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cal-weekday.weekend { color: #cbd5e1; }
+
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .cal-day {
+    min-height: 110px;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+  }
+  .cal-day:hover { background: #fafbff; }
+  .cal-day:nth-child(7n) { border-right: none; }
+  .cal-day.other-month { background: #fafafa; }
+  .cal-day.other-month .day-num { color: #d1d5db; }
+  .cal-day.today { background: #eff6ff; }
+  .cal-day.today .day-num {
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+  .cal-day.weekend .day-num { color: #cbd5e1; }
+  .cal-day.has-absences { }
+
+  .day-num {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .day-chips { display: flex; flex-direction: column; gap: 2px; }
+
+  .chip {
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 2px 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: white;
+    line-height: 1.4;
+    cursor: pointer;
+    position: relative;
+  }
+  .chip.morning {
+    background: linear-gradient(90deg, var(--color) 50%, color-mix(in srgb, var(--color) 30%, white) 50%);
+  }
+  .chip.afternoon {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--color) 30%, white) 50%, var(--color) 50%);
+    color: white;
+  }
+  .chip.full_day { background: var(--color); }
+  .chip.late_arrival {
+    background: var(--color);
+    opacity: 0.6;
+  }
+  .chip.brief_errand {
+    background: transparent;
+    border: 1.5px dashed var(--color);
+    color: var(--color);
+  }
+  .chip.wfh {
+    background: transparent;
+    border: 1.5px solid var(--color);
+    color: var(--color);
+    opacity: 0.6;
+  }
+  .more-chip {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    padding: 1px 4px;
+  }
+
+  /* ── Detail panel ── */
+  .detail-panel {
+    position: fixed;
+    right: 0; top: 68px;
+    width: 300px;
+    height: calc(100vh - 68px);
+    background: white;
+    border-left: 1px solid #e2e8f0;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.08);
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-header {
+    padding: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .detail-header h3 { font-size: 1rem; font-weight: 700; }
+  .detail-close {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    color: #64748b;
+  }
+  .detail-close:hover { background: #f8fafc; }
+  .detail-items { padding: 16px; flex: 1; overflow-y: auto; }
+  .detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+  }
+  .detail-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+  .detail-name { font-size: 0.85rem; font-weight: 600; }
+  .detail-period {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 1px;
+  }
+  .detail-reason {
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 3px;
+    font-style: italic;
+  }
+  .score-badge {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #475569;
+    flex-shrink: 0;
+  }
+
+  /* ── Summary view ── */
+  .summary-view { display: none; padding: 24px; flex: 1; overflow: auto; }
+  .summary-view.active { display: block; }
+  .calendar-area.hidden { display: none; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .person-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .person-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .person-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .person-card-name { font-size: 0.95rem; font-weight: 700; }
+  .person-card-total { font-size: 0.78rem; color: #64748b; margin-top: 1px; }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.82rem;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .stat-label { color: #64748b; }
+  .stat-val { font-weight: 600; }
+  .stat-bar {
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .recent-list { margin-top: 12px; }
+  .recent-entry {
+    display: flex;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+    padding: 3px 0;
+  }
+  .recent-date { font-weight: 600; color: #374151; min-width: 80px; }
+
+  /* No-data */
+  .no-absences { text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Absence Tracker — Hanah One</h1>
+    <div class="subtitle">#99-whereabout · Auto-updated daily at 6 PM</div>
+  </div>
+  <div class="view-tabs">
+    <button class="view-tab active" onclick="setView('calendar')">Calendar</button>
+    <button class="view-tab" onclick="setView('summary')">Summary</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>Team Members</h3>
+      <div id="legend-list"></div>
+    </div>
+    <div class="sidebar-section">
+      <h3>Legend</h3>
+      <div class="type-legend">
+        <div class="type-item"><div class="type-swatch"></div> Full day</div>
+        <div class="type-item"><div class="type-swatch half-left"></div> Morning absent</div>
+        <div class="type-item"><div class="type-swatch half-right"></div> Afternoon absent</div>
+        <div class="type-item"><div class="type-swatch partial"></div> Late / brief errand</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="calendar-area" id="calendarArea">
+    <div class="cal-nav">
+      <h2 id="monthTitle"></h2>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="navigate(-1)">&#8249;</button>
+        <button class="nav-btn today-btn" onclick="goToday()">Today</button>
+        <button class="nav-btn" onclick="navigate(1)">&#8250;</button>
+      </div>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-weekdays">
+        <div class="cal-weekday">Sun</div>
+        <div class="cal-weekday">Mon</div>
+        <div class="cal-weekday">Tue</div>
+        <div class="cal-weekday">Wed</div>
+        <div class="cal-weekday">Thu</div>
+        <div class="cal-weekday">Fri</div>
+        <div class="cal-weekday weekend">Sat</div>
+      </div>
+      <div class="cal-days" id="calDays"></div>
+    </div>
+  </div>
+
+  <!-- Summary view -->
+  <div class="summary-view" id="summaryView">
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <h3 id="detailDate"></h3>
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-items" id="detailItems"></div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────
+const ABSENCES = [
+  {"person_name":"Youngsoo Kim","absence_date":"2025-06-25","time_period":"late_arrival","absence_score":0.25,"reason":"late start","message_ts":"1750811760.345729"},
+  {"person_name":"Shawn Ha","absence_date":"2025-06-25","time_period":"late_arrival","absence_score":0.25,"reason":"late start (fatigue)","message_ts":"1750811382.999799"},
+  {"person_name":"Geonha Baek","absence_date":"2025-06-25","time_period":"late_arrival","absence_score":0.25,"reason":"late start (health management)","message_ts":"1750811346.376199"},
+  {"person_name":"Juwon Kim","absence_date":"2025-06-25","time_period":"late_arrival","absence_score":0.25,"reason":"late start","message_ts":"1750813424.780859"},
+  {"person_name":"Joey Kim","absence_date":"2025-06-20","time_period":"brief_errand","absence_score":0.25,"reason":"car registration errand","message_ts":"1750380264.569289"},
+  {"person_name":"Juwon Kim","absence_date":"2025-06-19","time_period":"morning","absence_score":0.5,"reason":"filming (shooting until 7am)","message_ts":"1750293525.620279"},
+  {"person_name":"Shawn Ha","absence_date":"2025-06-19","time_period":"late_arrival","absence_score":0.25,"reason":"hospital visit (body ache)","message_ts":"1750290752.435649"},
+  {"person_name":"Geonha Baek","absence_date":"2025-06-18","time_period":"late_arrival","absence_score":0.25,"reason":"late start (health + skipping lunch)","message_ts":"1750209084.952949"},
+  {"person_name":"Donghyun Yoo","absence_date":"2025-06-17","time_period":"morning","absence_score":0.5,"reason":"factory visit (quality inspection)","message_ts":"1750001709.971009"},
+  {"person_name":"Shawn Ha","absence_date":"2025-06-10","time_period":"morning","absence_score":0.5,"reason":"personal errand","message_ts":"1749514270.593839"},
+  {"person_name":"Donghyun Yoo","absence_date":"2025-06-05","time_period":"morning","absence_score":0.5,"reason":"factory visits (process + sticker factory, Ansan)","message_ts":"1749078917.408179"},
+  {"person_name":"Jongmin Chae","absence_date":"2025-06-05","time_period":"morning","absence_score":0.5,"reason":"factory visit (Ochang factory)","message_ts":"1749079541.370169"},
+  {"person_name":"Juwon Kim","absence_date":"2025-06-05","time_period":"morning","absence_score":0.5,"reason":"sticker inspection visit","message_ts":"1749080769.033729"},
+  {"person_name":"Joey Kim","absence_date":"2025-06-05","time_period":"morning","absence_score":0.5,"reason":"business meeting (LG Technology Ventures)","message_ts":"1748999148.384789"},
+  {"person_name":"Eun Sang Hwang","absence_date":"2025-06-04","time_period":"afternoon","absence_score":0.5,"reason":"personal appointment (1–4pm)","message_ts":"1748999327.941069"},
+  {"person_name":"Youngsoo Kim","absence_date":"2025-06-04","time_period":"late_arrival","absence_score":0.25,"reason":"late start (late exit previous night)","message_ts":"1748998090.016929"},
+  {"person_name":"Geonha Baek","absence_date":"2025-06-04","time_period":"morning","absence_score":0.5,"reason":"sick / hospital visit (gastroenteritis)","message_ts":"1748996762.666789"},
+  {"person_name":"Juwon Kim","absence_date":"2025-06-23","time_period":"brief_errand","absence_score":0.25,"reason":"hospital visit (during lunch)","message_ts":"1750645810.437289"},
+  {"person_name":"Jongmin Chae","absence_date":"2025-06-23","time_period":"late_arrival","absence_score":0.25,"reason":"late start (miscommunication about timing)","message_ts":"1750651588.700849"},
+  {"person_name":"Juwon Kim","absence_date":"2025-06-24","time_period":"late_arrival","absence_score":0.25,"reason":"late start","message_ts":"1750725475.995679"},
+  {"person_name":"Jongmin Chae","absence_date":"2025-06-24","time_period":"late_arrival","absence_score":0.25,"reason":"late start (apartment elevator issue)","message_ts":"1750726169.859179"},
+  {"person_name":"Rosse Han","absence_date":"2026-02-25","time_period":"brief_errand","absence_score":0.25,"reason":"personal errand + international driving license","message_ts":"1771981456.783409"},
+  {"person_name":"Donghyun Yoo","absence_date":"2026-02-25","time_period":"late_arrival","absence_score":0.25,"reason":"late start (late exit previous night)","message_ts":"1771980247.452099"},
+  {"person_name":"Youngsoo Kim","absence_date":"2026-02-25","time_period":"morning","absence_score":0.5,"reason":"police station visit (urgent)","message_ts":"1771975735.386009"},
+  {"person_name":"Changseok Lee","absence_date":"2026-02-26","time_period":"late_arrival","absence_score":0.25,"reason":"late start (health management)","message_ts":"1772064211.766149"},
+  {"person_name":"Joey Kim","absence_date":"2026-02-26","time_period":"late_arrival","absence_score":0.25,"reason":"late start (body not recovered)","message_ts":"1772065998.840679"},
+  {"person_name":"Youngsoo Kim","absence_date":"2026-03-02","time_period":"afternoon","absence_score":0.5,"reason":"pharmacy visit","message_ts":"1772287922.474549"},
+  {"person_name":"Youngsoo Kim","absence_date":"2026-03-03","time_period":"morning","absence_score":0.5,"reason":"police station visit","message_ts":"1772287922.474549"},
+  {"person_name":"Joey Kim","absence_date":"2026-03-03","time_period":"morning","absence_score":0.5,"reason":"child's school enrollment ceremony","message_ts":"1772493461.160989"},
+  {"person_name":"Donghyun Yoo","absence_date":"2026-03-05","time_period":"late_arrival","absence_score":0.25,"reason":"late start (late exit previous night)","message_ts":"1772650545.918169"},
+  {"person_name":"Youngsoo Kim","absence_date":"2026-03-05","time_period":"morning","absence_score":0.5,"reason":"pharmacy visit (health management)","message_ts":"1772673920.839579"},
+  {"person_name":"Donghyun Lee","absence_date":"2026-03-05","time_period":"late_arrival","absence_score":0.25,"reason":"late start (woke up late)","message_ts":"1772669921.686199"},
+  {"person_name":"Eun Sang Hwang","absence_date":"2026-03-11","time_period":"brief_errand","absence_score":0.25,"reason":"business lunch with accountant (WFH morning)","message_ts":"1773043960.897089"},
+  {"person_name":"Shawn Ha","absence_date":"2026-03-11","time_period":"morning","absence_score":0.5,"reason":"hospital visit (with father)","message_ts":"1773127395.035569"},
+  {"person_name":"Donghyun Yoo","absence_date":"2026-03-11","time_period":"morning","absence_score":0.5,"reason":"car inspection + pharmacy meeting + Dukchon-dong","message_ts":"1773124981.331959"},
+  {"person_name":"Youngsoo Kim","absence_date":"2026-03-11","time_period":"morning","absence_score":0.5,"reason":"pharmacy visit (returning for afternoon meeting)","message_ts":"1773184793.970109"}
+];
+
+// ── Person colors ──────────────────────────────────────
+const PERSON_COLORS = {
+  "Youngsoo Kim":  "#3b82f6",
+  "Shawn Ha":      "#f97316",
+  "Geonha Baek":   "#22c55e",
+  "Juwon Kim":     "#a855f7",
+  "Joey Kim":      "#ef4444",
+  "Donghyun Yoo":  "#14b8a6",
+  "Jongmin Chae":  "#eab308",
+  "Donghyun Lee":  "#64748b",
+  "Eun Sang Hwang":"#8b5cf6",
+  "Changseok Lee": "#06b6d4",
+  "Rosse Han":     "#ec4899",
+  "Minho Jeong":   "#84cc16",
+  "Soo Ah Shin":   "#f43f5e"
+};
+
+function colorFor(name) {
+  return PERSON_COLORS[name] || "#94a3b8";
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// ── Build indexed data ────────────────────────────────
+const byDate = {};
+ABSENCES.forEach(a => {
+  if (!byDate[a.absence_date]) byDate[a.absence_date] = [];
+  byDate[a.absence_date].push(a);
+});
+
+const byPerson = {};
+ABSENCES.forEach(a => {
+  if (!byPerson[a.person_name]) byPerson[a.person_name] = [];
+  byPerson[a.person_name].push(a);
+});
+
+// ── State ─────────────────────────────────────────────
+const today = new Date();
+let curYear = today.getFullYear();
+let curMonth = today.getMonth();
+let hiddenPeople = new Set();
+
+// ── Sidebar legend ────────────────────────────────────
+function buildLegend() {
+  const list = document.getElementById('legend-list');
+  // Sort by total score desc
+  const people = Object.keys(byPerson).sort((a, b) => {
+    const sa = byPerson[a].reduce((s, x) => s + x.absence_score, 0);
+    const sb = byPerson[b].reduce((s, x) => s + x.absence_score, 0);
+    return sb - sa;
+  });
+
+  list.innerHTML = '';
+  people.forEach(name => {
+    const total = byPerson[name].reduce((s, x) => s + x.absence_score, 0);
+    const color = colorFor(name);
+    const el = document.createElement('div');
+    el.className = 'legend-item';
+    el.dataset.person = name;
+    el.innerHTML = `
+      <div class="legend-dot" style="background:${color}"></div>
+      <span class="legend-name">${name.split(' ')[0]}</span>
+      <span class="legend-score">${total.toFixed(1)}d</span>
+    `;
+    el.addEventListener('click', () => togglePerson(name, el));
+    list.appendChild(el);
+  });
+}
+
+function togglePerson(name, el) {
+  if (hiddenPeople.has(name)) {
+    hiddenPeople.delete(name);
+    el.classList.remove('dimmed');
+  } else {
+    hiddenPeople.add(name);
+    el.classList.add('dimmed');
+  }
+  renderCalendar();
+}
+
+// ── Calendar render ───────────────────────────────────
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar() {
+  document.getElementById('monthTitle').textContent = `${MONTHS[curMonth]} ${curYear}`;
+
+  const container = document.getElementById('calDays');
+  container.innerHTML = '';
+
+  const firstDay = new Date(curYear, curMonth, 1).getDay();
+  const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+  const prevDays = new Date(curYear, curMonth, 0).getDate();
+
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // Previous month padding
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = prevDays - i;
+    const m = curMonth === 0 ? 12 : curMonth;
+    const y = curMonth === 0 ? curYear - 1 : curYear;
+    addDay(container, d, m, y, true, todayStr);
+  }
+
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    addDay(container, d, curMonth + 1, curYear, false, todayStr);
+  }
+
+  // Next month padding
+  const total = firstDay + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= remaining; d++) {
+    const m = curMonth === 11 ? 1 : curMonth + 2;
+    const y = curMonth === 11 ? curYear + 1 : curYear;
+    addDay(container, d, m, y, true, todayStr);
+  }
+}
+
+function addDay(container, day, month, year, otherMonth, todayStr) {
+  const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const isToday = dateStr === todayStr;
+  const dow = new Date(year, month - 1, day).getDay();
+  const isWeekend = dow === 0 || dow === 6;
+
+  const cell = document.createElement('div');
+  cell.className = `cal-day${otherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}`;
+  cell.dataset.date = dateStr;
+
+  const numDiv = document.createElement('div');
+  numDiv.className = 'day-num';
+  numDiv.textContent = day;
+  cell.appendChild(numDiv);
+
+  const absences = (byDate[dateStr] || []).filter(a => !hiddenPeople.has(a.person_name));
+  if (absences.length > 0) {
+    cell.classList.add('has-absences');
+    const chips = document.createElement('div');
+    chips.className = 'day-chips';
+    const MAX_SHOW = 3;
+    absences.slice(0, MAX_SHOW).forEach(a => {
+      const chip = document.createElement('div');
+      chip.className = `chip ${a.time_period}`;
+      chip.style.setProperty('--color', colorFor(a.person_name));
+      chip.textContent = a.person_name.split(' ')[0];
+      chip.title = `${a.person_name} — ${a.time_period.replace('_', ' ')} — ${a.reason}`;
+      chips.appendChild(chip);
+    });
+    if (absences.length > MAX_SHOW) {
+      const more = document.createElement('div');
+      more.className = 'more-chip';
+      more.textContent = `+${absences.length - MAX_SHOW} more`;
+      chips.appendChild(more);
+    }
+    cell.appendChild(chips);
+    cell.addEventListener('click', () => openDetail(dateStr, absences));
+  }
+
+  container.appendChild(cell);
+}
+
+// ── Detail panel ──────────────────────────────────────
+function openDetail(dateStr, absences) {
+  const panel = document.getElementById('detailPanel');
+  const title = document.getElementById('detailDate');
+  const items = document.getElementById('detailItems');
+
+  const d = new Date(dateStr + 'T12:00:00');
+  title.textContent = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  items.innerHTML = '';
+  if (absences.length === 0) {
+    items.innerHTML = '<div class="no-absences">No absences recorded</div>';
+  } else {
+    absences.forEach(a => {
+      const item = document.createElement('div');
+      item.className = 'detail-item';
+      const periodLabel = a.time_period.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+      item.innerHTML = `
+        <div class="detail-dot" style="background:${colorFor(a.person_name)}"></div>
+        <div style="flex:1">
+          <div class="detail-name">${a.person_name}</div>
+          <div class="detail-period">${periodLabel}</div>
+          <div class="detail-reason">${a.reason}</div>
+        </div>
+        <div class="score-badge">${a.absence_score >= 1 ? '1d' : a.absence_score >= 0.5 ? '½d' : '¼d'}</div>
+      `;
+      items.appendChild(item);
+    });
+  }
+  panel.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+// ── Navigation ────────────────────────────────────────
+function navigate(dir) {
+  curMonth += dir;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  if (curMonth < 0)  { curMonth = 11; curYear--; }
+  renderCalendar();
+  closeDetail();
+}
+
+function goToday() {
+  curYear = today.getFullYear();
+  curMonth = today.getMonth();
+  renderCalendar();
+  closeDetail();
+}
+
+// ── Summary view ──────────────────────────────────────
+function buildSummary() {
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = '';
+
+  const maxScore = Math.max(...Object.values(byPerson).map(arr => arr.reduce((s, x) => s + x.absence_score, 0)));
+
+  const sorted = Object.keys(byPerson).sort((a, b) => {
+    const sa = byPerson[a].reduce((s, x) => s + x.absence_score, 0);
+    const sb = byPerson[b].reduce((s, x) => s + x.absence_score, 0);
+    return sb - sa;
+  });
+
+  sorted.forEach(name => {
+    const abs = byPerson[name];
+    const total = abs.reduce((s, x) => s + x.absence_score, 0);
+    const fullDays  = abs.filter(x => x.absence_score >= 1).length;
+    const halfDays  = abs.filter(x => x.absence_score === 0.5).length;
+    const partials  = abs.filter(x => x.absence_score < 0.5 && x.absence_score > 0).length;
+    const color = colorFor(name);
+    const pct = maxScore > 0 ? (total / maxScore * 100) : 0;
+
+    const recent = [...abs].sort((a, b) => b.absence_date.localeCompare(a.absence_date)).slice(0, 4);
+
+    const card = document.createElement('div');
+    card.className = 'person-card';
+    card.innerHTML = `
+      <div class="person-card-header">
+        <div class="person-avatar" style="background:${color}">${initials(name)}</div>
+        <div>
+          <div class="person-card-name">${name}</div>
+          <div class="person-card-total">${total.toFixed(2)} days total</div>
+        </div>
+      </div>
+      <div class="stat-row"><span class="stat-label">Full days</span><span class="stat-val">${fullDays}</span></div>
+      <div class="stat-row"><span class="stat-label">Half days</span><span class="stat-val">${halfDays}</span></div>
+      <div class="stat-row"><span class="stat-label">Late / brief</span><span class="stat-val">${partials}</span></div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="recent-list">
+        ${recent.map(a => `
+          <div class="recent-entry">
+            <span class="recent-date">${a.absence_date}</span>
+            <span>${a.time_period.replace('_',' ')} — ${a.reason.length > 30 ? a.reason.slice(0,28)+'…' : a.reason}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ── View switching ────────────────────────────────────
+function setView(view) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const calArea = document.getElementById('calendarArea');
+  const sumView = document.getElementById('summaryView');
+
+  if (view === 'calendar') {
+    calArea.classList.remove('hidden');
+    sumView.classList.remove('active');
+  } else {
+    calArea.classList.add('hidden');
+    sumView.classList.add('active');
+    buildSummary();
+  }
+  closeDetail();
+}
+
+// ── Init ──────────────────────────────────────────────
+buildLegend();
+renderCalendar();
+
+// Close panel on outside click
+document.addEventListener('click', e => {
+  const panel = document.getElementById('detailPanel');
+  if (!panel.contains(e.target) && !e.target.closest('.cal-day.has-absences')) {
+    panel.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>

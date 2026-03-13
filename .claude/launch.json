@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "absence-calendar",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-Command", "cd 'C:/Users/eshwa/OneDrive/문서/Work/Hanah One/Claude'; python3 -m http.server 8766"],
+      "port": 8766
+    }
+  ]
+}
