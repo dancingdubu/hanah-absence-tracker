@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "absence-calendar",
-      "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-Command", "cd 'C:/Users/eshwa/OneDrive/문서/Work/Hanah One/Claude'; python3 -m http.server 8766"],
-      "port": 8766
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/C", "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\eshwa\\serve_absence.ps1"],
+      "port": 3000,
+      "readyOutput": "Serving"
     }
   ]
 }
